@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>버거 프랜차이즈 수집</title>
+
+  <!-- 1) initApp 과 authFailure 를 미리 정의 -->
+  <script>
+    // 인증 실패 시 호출
+    window.navermap_authFailure = function() {
+      console.error('❗️ 인증 실패: 키 또는 Referer 설정을 확인하세요.');
+      alert('네이버 지도 인증 실패!');
+    };
+
+    // SDK 준비 완료 후 호출
+    function initApp() {
+      console.log('▶ initApp() 호출됨 — naver 객체 존재:', typeof naver !== 'undefined');
+      // 이제 naver.maps.Service 를 안전히 쓸 수 있습니다
+      service = new naver.maps.Service();
+      statusEl.textContent = "✅ SDK 로드 완료\n수집 시작…";
+      collectAll();
+    }
+  </script>
+
+  <!--
+    2) SDK 로드 스크립트
+       • 반드시 한 줄에 src 전체
+       • callback=initApp 파라미터 포함
+       • async, defer 로 비동기 로드
+  -->
+<script async defer
+  src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=hvlhjv0l0c&callback=initApp">
+</script>
+</head>
+<body>
+  <pre id="status">초기화 중…</pre>
+  <button id="downloadBtn" disabled>CSV 다운로드</button>
+
+  <!-- 3) collectAll, collectBrand, downloadBtn 핸들러 정의 -->
+  <script>
+    var service, allResults = [];
+    var statusEl = document.getElementById('status');
+    var downloadBtn = document.getElementById('downloadBtn');
+    const brands = ['KFC','맥도날드','맘스터치','롯데리아','버거킹'];
+
+    async function collectAll() {
+      for (let b of brands) {
+        statusEl.textContent += `\n▶ ${b} 수집 중…`;
+        await collectBrand(b);
+      }
+      statusEl.textContent += `\n✅ 완료! 총 ${allResults.length}건 수집.`;
+      downloadBtn.disabled = false;
+    }
+
+    function collectBrand(brand) {
+      return new Promise(resolve => {
+        let page = 1;
+        function nextPage() {
+          service.keywordSearch({ query: brand + ' 서울', page: page }, (status, res) => {
+            if (status !== naver.maps.Service.Status.OK || !res.result.items.length || page === 5) {
+              return resolve();
+            }
+            res.result.items.forEach(p => allResults.push({
+              brand, name: p.title, address: p.address, lng: p.point.x, lat: p.point.y
+            }));
+            statusEl.textContent += ` page ${page}(${res.result.items.length})`;
+            page++;
+            setTimeout(nextPage, 200);
+          });
+        }
+        nextPage();
+      });
+    }
+
+    downloadBtn.addEventListener('click', () => {
+      const csv = 'brand,name,address,lng,lat\n'
+        + allResults.map(r =>
+            [r.brand,r.name,r.address,r.lng,r.lat]
+            .map(s => `"${s.replace(/"/g,'""')}"`).join(',')
+          ).join('\n');
+      const blob = new Blob([csv],{type:'text/csv'}), url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'burger_locations.csv';
+      document.body.append(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>
