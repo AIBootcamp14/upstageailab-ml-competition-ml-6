@@ -5,6 +5,8 @@
 Public/code/*.tar
 Public/data/*.tar
 Public/data/*.csv
+junyub/chrome-headless-shell-linux64/
+junyub/chrome-headless-shell-linux64.zip
 
 ### Flask ###
 instance/*
