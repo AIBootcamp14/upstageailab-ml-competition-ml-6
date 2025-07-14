@@ -1,0 +1,32 @@
+```bash
+google-chrome --version
+```
+
+명령어를 통해 Google Chrome 138 버전이 존재하는지 확인.
+만약 다른버전이라면 rm /usr/local/bin/chromedriver 를 통해 삭제
+
+이후 https://googlechromelabs.github.io/chrome-for-testing/#stable < 웹사이트에서 Stable 버전설치
+
+```bash
+# 설치
+wget https://storage.googleapis.com/chrome-for-testing-public/138.0.7204.94/linux64/chrome-headless-shell-linux64.zip
+
+# 압축해제
+unzip chrome-headless-shell-linux64.zip
+
+# 권한부여
+chmod +x chrome-headless-shell-linux64/chrome-headless-shell
+
+# PATH에 복사
+mv chrome-headless-shell-linux64/chrome-headless-shell /usr/local/bin/chromedriver
+```
+
+이제 ChromeDriver 138버전이 출력되어야 함
+
+추가로webdriver-mananger 설치
+
+```bash
+pip insall webdriver-manager
+```
+
+
