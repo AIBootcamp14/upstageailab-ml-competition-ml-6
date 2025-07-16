@@ -391,4 +391,6 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+naverAPI.env
+
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,linux,vim,visualstudiocode,jupyternotebooks,python,flask
