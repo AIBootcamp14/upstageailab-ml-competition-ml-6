@@ -32,5 +32,5 @@ print(f'Valid_RMSE: {valid_rmse}')
 test_pred = model.predict(test_df)
 submission = pd.DataFrame({'target': test_pred})
 
-submission.to_csv('../data/result_of_lgb-model.csv', index=False, encoding='utf-8')
+submission.to_csv('../results/result_of_lgb-model.csv', index=False, encoding='utf-8')
 print('예측 결과 저장완료')
