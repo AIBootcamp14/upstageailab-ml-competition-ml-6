@@ -5,7 +5,7 @@
 |    ![정소현](Public/image/소현.png)     |     ![신준엽](Public/image/준엽.png)      |       ![이준영](Public/image/준영.png)       |    ![김승완](Public/image/승완.png)    |
 | :-------------------------------------: | :---------------------------------------: | :------------------------------------------: | :------------------------------------: |
 | [정소현](https://github.com/soniajhung) | [신준엽](https://github.com/Shin-junyeob) | [이준영](https://github.com/junyeonglee1111) | [김승완](https://github.com/wan-seung) |
-|             팀장, 담당 역할             |                 담당 역할                 |                  담당 역할                   |               담당 역할                |
+|        팀장, Feature Engineering        |            Feature Engineering            |             Feature Engineering              |          Feature Engineering           |
 
 ## 1. Competition Info
 
@@ -108,7 +108,8 @@ upstageailab-ml-competition-ml-6/
 
 ### Leader Board
 
--
+- 7등..😂
+- RMSE 102984.4221
 
 ### Presentation
 
