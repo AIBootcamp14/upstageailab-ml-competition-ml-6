@@ -2,10 +2,10 @@
 
 ## Team
 
-| ![박준엽](https://avatars.githubusercontent.com/u/156163982?v=4) | ![이준영](https://avatars.githubusercontent.com/u/156163982?v=4) | ![김승완](https://avatars.githubusercontent.com/u/156163982?v=4) | ![김소현](https://avatars.githubusercontent.com/u/156163982?v=4) | ![오패캠](https://avatars.githubusercontent.com/u/156163982?v=4) |
-| :--------------------------------------------------------------: | :--------------------------------------------------------------: | :--------------------------------------------------------------: | :--------------------------------------------------------------: | :--------------------------------------------------------------: |
-|            [박패캠](https://github.com/UpstageAILab)             |            [이패캠](https://github.com/UpstageAILab)             |            [최패캠](https://github.com/UpstageAILab)             |            [김패캠](https://github.com/UpstageAILab)             |            [오패캠](https://github.com/UpstageAILab)             |
-|                         팀장, 담당 역할                          |                            담당 역할                             |                            담당 역할                             |                            담당 역할                             |                            담당 역할                             |
+|    ![정소현](Public/image/소현.png)     |     ![신준엽](Public/image/준엽.png)      |       ![이준영](Public/image/준영.png)       |    ![김승완](Public/image/승완.png)    |
+| :-------------------------------------: | :---------------------------------------: | :------------------------------------------: | :------------------------------------: |
+| [정소현](https://github.com/soniajhung) | [신준엽](https://github.com/Shin-junyeob) | [이준영](https://github.com/junyeonglee1111) | [김승완](https://github.com/wan-seung) |
+|             팀장, 담당 역할             |                 담당 역할                 |                  담당 역할                   |               담당 역할                |
 
 ## 1. Competition Info
 
@@ -32,7 +32,7 @@
 
 ```
 upstageailab-ml-competition-ml-6/
-├── junyub/                    # 박준엽 - 데이터 수집
+├── junyub/                    # 신준엽 - 데이터 수집
 │   ├── code/
 │   │   ├── burgerking.py
 │   │   └── mcdonalds.py
@@ -46,7 +46,7 @@ upstageailab-ml-competition-ml-6/
 │   │   ├── EDA_Clean_wanie.py     # ipynb 파일 py코드로 변환
 │   │   └── EDA_Clean_wanie.ipynb  # 소현님께서 작업해주신 EDA 노트북에 로그 트랜스포메이션 적용
 │   └── data/                 # 처리된 데이터
-├── sohyun/                    # 김소현
+├── sohyun/                    # 정소현
 │   ├── EDA_Clean_sohyun.ipynb     # EDA 및 데이터 정제
 │   ├── FastFood_sohyun.ipynb      # 패스트푸드 분석
 │   ├── fetch_branches.ipynb       # 매장 정보 수집
@@ -61,7 +61,6 @@ upstageailab-ml-competition-ml-6/
 ├── docs/                     # 문서
 │   └── pdf/                  # 발표 자료
 ├── results/                  # 최종 결과물
-└── venv/                     # 가상환경
 ```
 
 ## 3. Data Description
@@ -73,7 +72,7 @@ upstageailab-ml-competition-ml-6/
 
 ### EDA (Exploratory Data Analysis)
 
-#### 김소현 (sohyun/)
+#### 정소현 (sohyun/)
 
 - 인허가 데이터 기반 매장 정보 정제
 - 카카오 맵 API를 통한 매장 위치 데이터 수집
@@ -109,12 +108,11 @@ upstageailab-ml-competition-ml-6/
 
 ### Leader Board
 
-- 현재 진행 중인 프로젝트
-- 최종 결과는 경진대회 완료 후 업데이트 예정
+-
 
 ### Presentation
 
-- [발표 자료](docs/pdf/(Template) [패스트캠퍼스] Upstage AI Lab 1기\_그룹 스터디 .pptx)
+- [발표 자료] 작업중임으로 완성되면 추가해놓겠습니다~
 
 ## etc
 
