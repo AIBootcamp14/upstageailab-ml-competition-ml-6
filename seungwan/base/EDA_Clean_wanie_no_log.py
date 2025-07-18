@@ -57,8 +57,8 @@ import lightgbm as lgb
 
 def main():
     # 필요한 데이터를 load 하겠습니다. 경로는 환경에 맞게 지정해주면 됩니다.
-    train_path = '../junyub/data/modified_train.csv'
-    test_path = '../junyub/data/modified_test.csv'
+    train_path = '../../junyub/data/modified_train.csv'
+    test_path = '../../junyub/data/modified_test.csv'
 
     # 파일 존재 여부 확인
     if not os.path.exists(train_path):
@@ -335,7 +335,7 @@ def main():
     ### junyub 폴더의 추가 데이터를 활용한 피쳐 생성 ###
     
     # 1. 지하철역 관련 피쳐 생성
-    subway_file = '../junyub/data/modified_subway_feature.csv'
+    subway_file = '../../junyub/data/modified_subway_feature.csv'
     if os.path.exists(subway_file):
         df_subway = pd.read_csv(subway_file, encoding='utf-8')
         print(f"지하철 데이터 로드 완료: {len(df_subway)}개 역")

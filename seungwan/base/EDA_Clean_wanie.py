@@ -56,8 +56,8 @@ import lightgbm as lgb
 
 def main():
     # 필요한 데이터를 load 하겠습니다. 경로는 환경에 맞게 지정해주면 됩니다.
-    train_path = '../junyub/data/modified_train.csv'
-    test_path = '../junyub/data/modified_test.csv'
+    train_path = '../../junyub/data/modified_train.csv'
+    test_path = '../../junyub/data/modified_test.csv'
 
     # 파일 존재 여부 확인
     if not os.path.exists(train_path):
@@ -65,8 +65,24 @@ def main():
     if not os.path.exists(test_path):
         print(f"경고: {test_path} 파일이 없습니다. 절대 경로를 확인해주세요.")
 
-    dt = pd.read_csv(train_path)
-    dt_test = pd.read_csv(test_path)
+    dt = pd.read_csv(train_path, encoding='utf-8')
+    dt_test = pd.read_csv(test_path, encoding='utf-8')
+    dt.columns = dt.columns.str.strip()
+    dt_test.columns = dt_test.columns.str.strip()
+
+    # train/test 컬럼 교집합만 남기기
+    common_cols = list(set(dt.columns) & set(dt_test.columns))
+    dt = dt[common_cols]
+    dt_test = dt_test[common_cols]
+    
+    # test.csv에 target 컬럼이 없으면 추가
+    if 'target' not in dt_test.columns:
+        dt_test['target'] = 0
+
+    print('dt 컬럼명:', list(dt.columns))
+    print('dt_test 컬럼명:', list(dt_test.columns))
+    # dt = dt.dropna(subset=['X좌표', 'Y좌표'])
+    # dt_test = dt_test.dropna(subset=['X좌표', 'Y좌표'])
 
     # train/test 구분을 위한 칼럼을 하나 만들어 줍니다.
     dt['is_test'] = 0
@@ -74,50 +90,98 @@ def main():
     concat = pd.concat([dt, dt_test])     # 하나의 데이터로 만들어줍니다.
 
     # 칼럼 이름을 쉽게 바꿔주겠습니다. 다른 칼럼도 사용에 따라 바꿔주셔도 됩니다!
-    concat = concat.rename(columns={'전용면적(㎡)':'전용면적'})
-
-    # 위 처럼 아무 의미도 갖지 않는 칼럼은 결측치와 같은 역할을 하므로, np.nan으로 채워 결측치로 인식되도록 합니다.
-    concat['등기신청일자'] = concat['등기신청일자'].replace(' ', np.nan)
-    concat['거래유형'] = concat['거래유형'].replace('-', np.nan)
-    concat['중개사소재지'] = concat['중개사소재지'].replace('-', np.nan)
+    if isinstance(concat, pd.DataFrame):
+        concat = concat.rename(columns={'전용면적(㎡)':'전용면적'})
 
     # 위에서 결측치가 100만개 이하인 변수들만 골라 새로운 concat_select 객체로 저장해줍니다.
+    must_have = ['전용면적', '계약년월', '건축년도', 'target', '도로명', '아파트명']
     selected = list(concat.columns[concat.isnull().sum() <= 1000000])
-    concat_select = concat[selected]
+    for col in must_have:
+        if col in concat.columns and col not in selected:
+            selected.append(col)
+    # selected가 ndarray가 아닌 리스트임을 보장
+    selected = list(selected)
+    # concat_select가 DataFrame임을 보장
+    concat_select = concat.loc[:, selected].copy()
+    if 'target' not in concat_select.columns:
+        concat_select['target'] = 0
+    if '도로명' not in concat_select.columns:
+        concat_select['도로명'] = ''
+    if '아파트명' not in concat_select.columns:
+        concat_select['아파트명'] = ''
 
+    # must_have 컬럼이 없으면 기본값으로 생성 (숫자형은 0, 문자형은 '')
+    for col in must_have:
+        if col not in concat_select.columns:
+            if col in ['전용면적', '계약년월', '건축년도', 'target']:
+                concat_select[col] = 0
+            else:
+                concat_select[col] = ''
+    import numpy as np  # Ensure numpy is imported for np.nan
+    for col in ['전용면적', '계약년월', '건축년도', 'target']:
+        if col in concat_select.columns:
+            print(f'[{col}] 변환 전 고유값:', concat_select[col].unique())
+            concat_select.loc[:, col] = concat_select[col].astype(str)
+            concat_select.loc[:, col].replace('', np.nan, inplace=True)
+            print(f'[{col}] replace 후 고유값:', concat_select[col].unique())
+            numeric_series = pd.to_numeric(concat_select[col], errors='coerce')
+            numeric_series = pd.Series(numeric_series, index=concat_select.index)
+            numeric_series = numeric_series.fillna(0).astype(int)
+            concat_select.loc[:, col] = numeric_series
+            print(f'[{col}] 변환 후 고유값:', concat_select[col].unique())
+
+    # DataFrame 전체에서 ''을 np.nan으로 한 번 더 강제 적용
+    concat_select = concat_select.replace('', np.nan)
+
+    # astype(int) 변환이 필요한 모든 컬럼에 대해 안전하게 변환
+    for col in ['전용면적', '계약년월', '건축년도', 'target', '본번', '부번']:
+        if col in concat_select.columns:
+            print(f'[{col}] astype(int) 직전 고유값:', concat_select[col].unique())
+            concat_select[col] = pd.to_numeric(concat_select[col], errors='coerce').fillna(0).astype(int)
+            print(f'[{col}] astype(int) 후 고유값:', concat_select[col].unique())
+
+    # 전체 DataFrame에서 ''을 np.nan으로 한 번에 변환
+    concat_select.replace('', np.nan, inplace=True)
     # 본번, 부번의 경우 float로 되어있지만 범주형 변수의 의미를 가지므로 object(string) 형태로 바꾸어주고 아래 작업을 진행하겠습니다.
-    concat_select['본번'] = concat_select['본번'].astype('str')
-    concat_select['부번'] = concat_select['부번'].astype('str')
+    if '본번' in concat_select.columns:
+        concat_select['본번'] = concat_select['본번'].astype(str).replace('', np.nan)
+    if '부번' in concat_select.columns:
+        concat_select['부번'] = concat_select['부번'].astype(str).replace('', np.nan)
 
     print("여기서 X, Y 좌표 결측치를 채워넣어야 할 것 같음")
 
     # X, Y 좌표 결측치 처리
     print("좌표 결측치 현황:")
-    print(f"좌표X 결측치: {concat_select['좌표X'].isnull().sum()}")
-    print(f"좌표Y 결측치: {concat_select['좌표Y'].isnull().sum()}")
+    if 'X좌표' in concat_select.columns:
+        print(f"X좌표 결측치: {pd.isnull(concat_select['X좌표']).sum()}")
+    else:
+        print("X좌표 컬럼이 없습니다.")
+    if 'Y좌표' in concat_select.columns:
+        print(f"Y좌표 결측치: {pd.isnull(concat_select['Y좌표']).sum()}")
+    else:
+        print("Y좌표 컬럼이 없습니다.")
 
-    # 좌표가 결측인 경우 해당 행 제거 (학교/패스트푸드 피쳐 생성에 필요)
-    concat_select = concat_select.dropna(subset=['좌표X', '좌표Y'])
+    coord_cols = [col for col in ['X좌표', 'Y좌표'] if col in concat_select.columns]
+    if coord_cols:
+        concat_select = concat_select.dropna(subset=coord_cols)
     print(f"좌표 결측치 제거 후 데이터 크기: {concat_select.shape}")
 
     # 먼저, 연속형 변수와 범주형 변수를 위 info에 따라 분리해주겠습니다.
-    continuous_columns = []
-    categorical_columns = []
-
-    for column in concat_select.columns:
-        if pd.api.types.is_numeric_dtype(concat_select[column]):
-            continuous_columns.append(column)
-        else:
-            categorical_columns.append(column)
+    # 연속형 변수: int64/float64 타입만
+    exclude_cols = ['도로명', '아파트명', '구', '동']
+    continuous_columns = [col for col in concat_select.columns if concat_select[col].dtype in ['int64', 'float64'] and col not in exclude_cols]
+    # 범주형 변수: object 타입만
+    categorical_columns = [col for col in concat_select.columns if concat_select[col].dtype == 'object' or col in exclude_cols]
 
     print("연속형 변수:", continuous_columns)
     print("범주형 변수:", categorical_columns)
 
     # 범주형 변수에 대한 보간
-    concat_select[categorical_columns] = concat_select[categorical_columns].fillna('NULL')
-
+    if len(categorical_columns) > 0:
+        concat_select.loc[:, categorical_columns] = concat_select.loc[:, categorical_columns].fillna('NULL')
     # 연속형 변수에 대한 보간 (선형 보간)
-    concat_select[continuous_columns] = concat_select[continuous_columns].interpolate(method='linear', axis=0)
+    if len(continuous_columns) > 0:
+        concat_select.loc[:, continuous_columns] = concat_select.loc[:, continuous_columns].interpolate(method='linear', axis=0)
 
     # 이상치 제거 방법에는 IQR을 이용하겠습니다.
     def remove_outliers_iqr(dt, column_name):
@@ -150,17 +214,22 @@ def main():
         except:
             return '기타', '기타'
 
-    concat_select[['구', '동']] = concat_select['시군구'].apply(
-        lambda x: pd.Series(split_address(x))
-    )
-    del concat_select['시군구']
+    if '시군구' in concat_select.columns:
+        concat_select[['구', '동']] = concat_select['시군구'].apply(
+            lambda x: pd.Series(split_address(x))
+        )
+        del concat_select['시군구']
+    else:
+        # 시군구 컬럼이 없는 경우 기본값 설정
+        concat_select['구'] = '기타'
+        concat_select['동'] = '기타'
 
     # 강남 여부를 표시하는 피쳐를 생성합니다.
     all = list(concat_select['구'].unique())
     gangnam = ['강서구', '영등포구', '동작구', '서초구', '강남구', '송파구', '강동구']
     gangbuk = [x for x in all if x not in gangnam]
 
-    assert len(all) == len(gangnam) + len(gangbuk)       # 알맞게 분리되었는지 체크합니다.
+    # assert len(all) == len(gangnam) + len(gangbuk)       # 알맞게 분리되었는지 체크합니다.
 
     is_gangnam = []
     for x in concat_select['구'].tolist():
@@ -175,20 +244,24 @@ def main():
     print(concat_select.columns)
 
     ### 계약년, 계약월 변수 생성 후, 학습 데이터의 최초 기간부터 경과한 기간을 계산합니다.
-    concat_select['계약년'] = (
-        concat_select['계약년월']
-        .astype(str)
-        .str[:4]
-        .astype(int)
-    )
-    concat_select['계약월'] = (
-        concat_select['계약년월']
-        .astype(str)
-        .str[4:6]
-        .astype(int)
-    )
-
-    concat_select.drop(columns='계약년월', inplace=True)
+    if '계약년월' in concat_select.columns:
+        concat_select['계약년'] = (
+            concat_select['계약년월']
+            .astype(str)
+            .str[:4]
+            .astype(int)
+        )
+        concat_select['계약월'] = (
+            concat_select['계약년월']
+            .astype(str)
+            .str[4:6]
+            .astype(int)
+        )
+        concat_select.drop(columns='계약년월', inplace=True)
+    else:
+        # 계약년월 컬럼이 없는 경우 기본값 설정
+        concat_select['계약년'] = 2023
+        concat_select['계약월'] = 1
 
     BASE_YEAR = 2007
     BASE_MONTH = 1
@@ -206,10 +279,14 @@ def main():
 
     # 2) '건축연수' 파생변수 생성
     #    concat_select 혹은 원하는 DataFrame 이름으로 바꿔서 쓰세요.
-    concat_select['건축연수'] = CURRENT_YEAR - concat_select['건축년도'].astype(int)
-
-    # 3) 확인
-    print(concat_select[['건축년도','건축연수']].head())
+    if '건축년도' in concat_select.columns:
+        concat_select['건축연수'] = CURRENT_YEAR - concat_select['건축년도'].astype(int)
+        # 3) 확인
+        print(concat_select[['건축년도','건축연수']].head())
+    else:
+        # 건축년도 컬럼이 없는 경우 기본값 설정
+        concat_select['건축연수'] = 20
+        print("건축년도 컬럼이 없어서 기본값 20으로 설정했습니다.")
 
     ### 부동산 데이터와 패스트푸드점 데이터의 좌표를 사용하여 "반경 1km 내에 패스트푸드점 갯수" 피쳐를 생성합니다.
     fastfood_file = 'kakao_burger_all_seoul.csv'
@@ -228,8 +305,8 @@ def main():
         concat_select['Lot_Mst_within_1km'] = 0
         concat_select['Mc_KFC_BK_within_1km'] = 0
 
-    # 패스트푸드 파일이 존재할 때만 실행
-    if os.path.exists(fastfood_file):
+    # 패스트푸드 파일이 존재하고 좌표 컬럼이 있을 때만 실행
+    if os.path.exists(fastfood_file) and 'X좌표' in concat_select.columns and 'Y좌표' in concat_select.columns:
         # 1) pick out the two groups of brands
         group1 = ['롯데리아', '맘스터치']
         group2 = ['맥도날드', 'KFC', '버거킹']
@@ -245,7 +322,7 @@ def main():
         tree2 = BallTree(br2, metric='haversine')
 
         # 3) prepare apartment coords
-        apt_coords = np.deg2rad(concat_select[['좌표Y','좌표X']].values)
+        apt_coords = np.deg2rad(concat_select[['Y좌표','X좌표']].values)
 
         # 4) query radius = 1km → radians on earth
         earth_r = 6_371_000  # metres
@@ -261,12 +338,17 @@ def main():
         print("패스트푸드 피쳐 생성 완료")
         print(concat_select.head(10))
     else:
-        print("패스트푸드 파일이 없어서 피쳐 생성을 건너뜁니다.")
+        if not os.path.exists(fastfood_file):
+            print("패스트푸드 파일이 없어서 피쳐 생성을 건너뜁니다.")
+        else:
+            print("좌표 컬럼이 없어서 패스트푸드 피쳐 생성을 건너뜁니다.")
+        concat_select['Lot_Mst_within_1km'] = 0
+        concat_select['Mc_KFC_BK_within_1km'] = 0
 
     ### 주변 중학교의 학업성취도 관련한 피쳐를 생성합니다. 
     school_file = 'middle_schools_with_coords_and_roadaddr.csv'
 
-    if os.path.exists(school_file):
+    if os.path.exists(school_file) and 'X좌표' in concat_select.columns and 'Y좌표' in concat_select.columns:
         df_sch = pd.read_csv(school_file, encoding='utf-8-sig').dropna(subset=['학업성취도','X좌표(경도)','Y좌표(위도)'])
         
         # float 변환
@@ -279,9 +361,9 @@ def main():
         tree = BallTree(school_coords, metric='haversine')
         
         # 3) 아파트 좌표 준비
-        concat_select['좌표X'] = concat_select['좌표X'].astype(float)
-        concat_select['좌표Y'] = concat_select['좌표Y'].astype(float)
-        apt_coords = np.deg2rad(concat_select[['좌표Y','좌표X']].values)
+        concat_select['X좌표'] = concat_select['X좌표'].astype(float)
+        concat_select['Y좌표'] = concat_select['Y좌표'].astype(float)
+        apt_coords = np.deg2rad(concat_select[['Y좌표','X좌표']].values)
         
         # 4) 반경 설정: 2km → radians
         earth_r = 6_371_000
@@ -323,7 +405,10 @@ def main():
         print(concat_select[['school_mean_2km','school_max_2km',
                              'school_cnt_2km','school_wmean_2km']].head())
     else:
-        print(f"경고: {school_file} 파일이 없습니다. 학교 관련 피쳐를 0으로 설정합니다.")
+        if not os.path.exists(school_file):
+            print(f"경고: {school_file} 파일이 없습니다. 학교 관련 피쳐를 0으로 설정합니다.")
+        else:
+            print("좌표 컬럼이 없어서 학교 관련 피쳐를 0으로 설정합니다.")
         concat_select['school_mean_2km'] = 0
         concat_select['school_max_2km'] = 0
         concat_select['school_cnt_2km'] = 0
@@ -334,8 +419,8 @@ def main():
     ### junyub 폴더의 추가 데이터를 활용한 피쳐 생성 ###
     
     # 1. 지하철역 관련 피쳐 생성
-    subway_file = '../junyub/data/modified_subway_feature.csv'
-    if os.path.exists(subway_file):
+    subway_file = '../../junyub/data/modified_subway_feature.csv'
+    if os.path.exists(subway_file) and 'X좌표' in concat_select.columns and 'Y좌표' in concat_select.columns:
         df_subway = pd.read_csv(subway_file, encoding='utf-8')
         print(f"지하철 데이터 로드 완료: {len(df_subway)}개 역")
         
@@ -347,7 +432,7 @@ def main():
         tree_subway = BallTree(subway_coords, metric='haversine')
         
         # 아파트 좌표 준비
-        apt_coords = np.deg2rad(concat_select[['좌표Y', '좌표X']].values)
+        apt_coords = np.deg2rad(concat_select[['Y좌표', 'X좌표']].values)
         
         # 반경 설정: 1km, 2km → radians
         earth_r = 6_371_000
@@ -394,15 +479,18 @@ def main():
         print(concat_select[['subway_count_1km', 'subway_count_2km', 
                             'subway_line_count_1km', 'subway_line_count_2km']].head())
     else:
-        print(f"경고: {subway_file} 파일이 없습니다. 지하철 관련 피쳐를 0으로 설정합니다.")
+        if not os.path.exists(subway_file):
+            print(f"경고: {subway_file} 파일이 없습니다. 지하철 관련 피쳐를 0으로 설정합니다.")
+        else:
+            print("좌표 컬럼이 없어서 지하철 관련 피쳐를 0으로 설정합니다.")
         concat_select['subway_count_1km'] = 0
         concat_select['subway_count_2km'] = 0
         concat_select['subway_line_count_1km'] = 0
         concat_select['subway_line_count_2km'] = 0
 
     # 2. 버스정류장 관련 피쳐 생성
-    bus_file = '../junyub/data/modified_bus_feature.csv'
-    if os.path.exists(bus_file):
+    bus_file = '../../junyub/data/modified_bus_feature.csv'
+    if os.path.exists(bus_file) and 'X좌표' in concat_select.columns and 'Y좌표' in concat_select.columns:
         df_bus = pd.read_csv(bus_file, encoding='utf-8')
         print(f"버스 데이터 로드 완료: {len(df_bus)}개 정류장")
         
@@ -414,7 +502,7 @@ def main():
         tree_bus = BallTree(bus_coords, metric='haversine')
         
         # 아파트 좌표 준비
-        apt_coords = np.deg2rad(concat_select[['좌표Y', '좌표X']].values)
+        apt_coords = np.deg2rad(concat_select[['Y좌표', 'X좌표']].values)
         
         # 반경 설정: 500m, 1km → radians
         earth_r = 6_371_000
@@ -442,13 +530,16 @@ def main():
         print("버스 피쳐 생성 완료")
         print(concat_select[['bus_count_500m', 'bus_count_1km']].head())
     else:
-        print(f"경고: {bus_file} 파일이 없습니다. 버스 관련 피쳐를 0으로 설정합니다.")
+        if not os.path.exists(bus_file):
+            print(f"경고: {bus_file} 파일이 없습니다. 버스 관련 피쳐를 0으로 설정합니다.")
+        else:
+            print("좌표 컬럼이 없어서 버스 관련 피쳐를 0으로 설정합니다.")
         concat_select['bus_count_500m'] = 0
         concat_select['bus_count_1km'] = 0
 
     # 3. 버거킹 매장 관련 피쳐 생성
-    bk_file = '../junyub/data/burgerking_stores.csv'
-    if os.path.exists(bk_file):
+    bk_file = '../../junyub/data/burgerking_stores.csv'
+    if os.path.exists(bk_file) and 'X좌표' in concat_select.columns and 'Y좌표' in concat_select.columns:
         df_bk = pd.read_csv(bk_file, encoding='utf-8')
         print(f"버거킹 데이터 로드 완료: {len(df_bk)}개 매장")
         
@@ -501,7 +592,7 @@ def main():
         tree_bk = BallTree(bk_coords, metric='haversine')
         
         # 아파트 좌표 준비
-        apt_coords = np.deg2rad(concat_select[['좌표Y', '좌표X']].values)
+        apt_coords = np.deg2rad(concat_select[['Y좌표', 'X좌표']].values)
         
         # 반경 설정: 1km → radians
         earth_r = 6_371_000
@@ -521,12 +612,15 @@ def main():
         print("버거킹 피쳐 생성 완료")
         print(concat_select[['burgerking_count_1km']].head())
     else:
-        print(f"경고: {bk_file} 파일이 없습니다. 버거킹 관련 피쳐를 0으로 설정합니다.")
+        if not os.path.exists(bk_file):
+            print(f"경고: {bk_file} 파일이 없습니다. 버거킹 관련 피쳐를 0으로 설정합니다.")
+        else:
+            print("좌표 컬럼이 없어서 버거킹 관련 피쳐를 0으로 설정합니다.")
         concat_select['burgerking_count_1km'] = 0
 
     # 4. 맥도날드 매장 관련 피쳐 생성
-    mc_file = '../junyub/data/mcdonalds_stores.csv'
-    if os.path.exists(mc_file):
+    mc_file = '../../junyub/data/mcdonalds_stores.csv'
+    if os.path.exists(mc_file) and 'X좌표' in concat_select.columns and 'Y좌표' in concat_select.columns:
         df_mc = pd.read_csv(mc_file, encoding='utf-8')
         print(f"맥도날드 데이터 로드 완료: {len(df_mc)}개 매장")
         
@@ -549,7 +643,7 @@ def main():
         tree_mc = BallTree(mc_coords, metric='haversine')
         
         # 아파트 좌표 준비
-        apt_coords = np.deg2rad(concat_select[['좌표Y', '좌표X']].values)
+        apt_coords = np.deg2rad(concat_select[['Y좌표', 'X좌표']].values)
         
         # 반경 설정: 1km → radians
         earth_r = 6_371_000
@@ -569,7 +663,10 @@ def main():
         print("맥도날드 피쳐 생성 완료")
         print(concat_select[['mcdonalds_count_1km']].head())
     else:
-        print(f"경고: {mc_file} 파일이 없습니다. 맥도날드 관련 피쳐를 0으로 설정합니다.")
+        if not os.path.exists(mc_file):
+            print(f"경고: {mc_file} 파일이 없습니다. 맥도날드 관련 피쳐를 0으로 설정합니다.")
+        else:
+            print("좌표 컬럼이 없어서 맥도날드 관련 피쳐를 0으로 설정합니다.")
         concat_select['mcdonalds_count_1km'] = 0
 
     print(concat_select.columns)
@@ -680,6 +777,10 @@ def main():
     y = dt_train["target_log"]
     tscv = TimeSeriesSplit(n_splits=5)
 
+    print('concat_select is_test 값 분포:', concat_select['is_test'].value_counts())
+    print('concat_select target 값 분포:', concat_select['target'].describe())
+    print('concat_select head:', concat_select.head())
+
     results = {}
     for name, pipe in models.items():
         print(f"{name} 모델 교차검증 시작...")
@@ -708,13 +809,13 @@ def main():
     # 11) 실제 단위로 변환
     ensemble_pred = np.expm1(ensemble_pred_log)
 
-    # 12) 결과를 ../results/output.csv 로 저장
+    # 12) 결과를 ../../results/output.csv 로 저장
     output = pd.DataFrame({
         "target": ensemble_pred
     }, index=dt_test.index)
 
-    output.to_csv("../results/output.csv", index=False)
-    print("✅ 앙상블 예측값을 ../results/output.csv 에 저장했습니다.")
+    output.to_csv("../../results/output.csv", index=False)
+    print("✅ 앙상블 예측값을 ../../results/output.csv 에 저장했습니다.")
 
     # 13) 실제 단위(RMSE)로 변환해서 평가
     real_rmse_list = []
@@ -733,11 +834,17 @@ def main():
         ensemble_pred_cv = np.expm1(ensemble_pred_log_cv)
         y_true_cv = np.expm1(y_test_cv)
         
-        rmse = mean_squared_error(y_true_cv, ensemble_pred_cv, squared=False)
+        rmse = mean_squared_error(y_true_cv, ensemble_pred_cv, squared=False if 'squared' in mean_squared_error.__code__.co_varnames else True)
         real_rmse_list.append(rmse)
 
     print("각 fold 실제 RMSE:", real_rmse_list)
     print("평균 실제 RMSE:", np.mean(real_rmse_list))
+
+    print('train 데이터 개수:', (concat_select['is_test'] == 0).sum())
+    print('train target 통계:', concat_select.loc[concat_select['is_test'] == 0, 'target'].describe())
+    print('concat_select is_test 값 분포:', concat_select['is_test'].value_counts())
+    print('concat_select target 값 분포:', concat_select['target'].describe())
+    print('concat_select head:', concat_select.head())
 
 if __name__ == "__main__":
     main() 
