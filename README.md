@@ -113,7 +113,7 @@ upstageailab-ml-competition-ml-6/
 
 ### Presentation
 
-- [발표 자료] 작업중임으로 완성되면 추가해놓겠습니다~
+- [발표 자료](https://drive.google.com/file/d/1qDE6M0GI5JlmiwG0keGopdh-5TdpWRh1/view?usp=drive_link)
 
 ## etc
 
