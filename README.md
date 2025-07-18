@@ -69,6 +69,7 @@ upstageailab-ml-competition-ml-6/
 - **지하철 데이터**: 서울시 지하철 역별 시간대별 이용객 수
 - **인허가 데이터**: 서울시 일반음식점 및 휴게음식점 인허가 정보
 - **카카오 맵 API 데이터**: 서울시 패스트푸드점 위치 및 상세 정보
+- **중학교 학업성취도 데이터**: 서울시 중학교의 이름, 학업성취도 정보
 
 ### EDA (Exploratory Data Analysis)
 
@@ -82,6 +83,11 @@ upstageailab-ml-competition-ml-6/
 - 베이스라인 모델을 위한 데이터 전처리
 - 중학교 위치 데이터와 매장 데이터 결합
 - 로그 변환 및 정규화 적용
+
+#### 이준영 (junyeonglee1111/)
+
+- 중학교 학업성취도 크롤링 후 csv 파일 변환
+- 강남역 위치를 기반으로 한 접근시간 데이터 제작
 
 ### Feature Engineering
 
@@ -123,8 +129,8 @@ upstageailab-ml-competition-ml-6/
 
 ### Reference
 
-- 서울시 공공데이터 포털
+- [서울시 공공데이터 포털](https://www.data.go.kr/tcs/dss/selectDataSetList.do?dType=&keyword=&org=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C&orgFilter=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C&orgFullName=%EC%84%9C%EC%9A%B8%ED%8A%B9%EB%B3%84%EC%8B%9C&conditionType=search)
 - 지하철역 및 버스정류장 추가 데이터
-- 카카오 맵 API
+- [카카오 맵 API]
 - 패스트푸드 업계 데이터
-- 중학교 학업성취도 자료
+- [중학교 학업성취도 자료](https://asil.kr/asil/sub/school_list.jsp)
